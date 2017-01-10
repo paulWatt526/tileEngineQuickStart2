@@ -28,6 +28,8 @@ local ENVIRONMENT = {
 local CAMERA_SPEED      = 4 / 1000          -- Camera speed, 4 tiles per second
 local ROW_COUNT         = #ENVIRONMENT      -- Row count of the environment
 local COLUMN_COUNT      = #ENVIRONMENT[1]   -- Column count of the environment
+local WALL_LAYER_COUNT  = 4                 -- The number of extruded wall layers
+local SCALING_DELTA     = 0.04              -- The scaling delta between wall layers
 
 local tileEngine                            -- Reference to the tile engine
 local lightingModel                         -- Reference to the lighting model
@@ -82,6 +84,25 @@ local function addFloorToLayer(layer)
                         resourceKey="tiles_1"
                     })
                 )
+            end
+        end
+    end
+end
+
+-- -----------------------------------------------------------------------------------
+-- A simple helper function to add walls to a layer.
+-- -----------------------------------------------------------------------------------
+local function addWallsToLayer(layer)
+    for row=1,ROW_COUNT do
+        for col=1,COLUMN_COUNT do
+            local value = ENVIRONMENT[row][col]
+            if value == 1 then
+                layer.updateTile(
+                    row,
+                    col,
+                    TileEngine.Tile.new({
+                        resourceKey="tiles_1"
+                    }))
             end
         end
     end
@@ -237,6 +258,17 @@ function scene:create( event )
     -- Add the layer to the module at index 1 (indexes start at 1, not 0).  Set
     -- the scaling delta to zero.
     module.insertLayerAtIndex(floorLayer, 1, 0)
+
+    -- Create extruded wall layers
+    for i=1,WALL_LAYER_COUNT do
+        local wallLayer = TileEngine.TileLayer.new({
+            rows = ROW_COUNT,
+            columns = COLUMN_COUNT
+        })
+        addWallsToLayer(wallLayer)
+        wallLayer.resetDirtyTileCollection()
+        module.insertLayerAtIndex(wallLayer, i + 1, SCALING_DELTA)
+    end
 
     -- Add the module to the engine.
     tileEngine.addModule({module = module})
